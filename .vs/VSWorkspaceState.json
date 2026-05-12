@@ -1,6 +1,11 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\src",
+    "\\src\\android",
+    "\\src\\android\\res",
+    "\\src\\android\\res\\xml",
+    "\\www"
   ],
   "SelectedNode": "\\plugin.xml",
   "PreviewInSolutionExplorer": false

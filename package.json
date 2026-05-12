@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-android-openfile",
-  "version": "1.0.1",
+  "version": "1.0.33",
   "description": "Open files in local file system. Android 13+ permisions using Storage Access Framework (SAF) and Intents",
   "cordova": {
     "id": "cordova-plugin-android-openfile",
@@ -8,6 +8,11 @@
       "android"
     ]
   },
+  "files": [
+    "www",
+    "src",
+    "plugin.xml"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

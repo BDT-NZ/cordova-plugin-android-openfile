@@ -1,69 +1,161 @@
-# cordova-plugin-android-openpdf
+# cordova-plugin-android-openfile
 
-built to comply with: Storage Access Framework (SAF)
-to use with Android 13 permisions
+A Cordova plugin for opening files on Android. Uses MediaStore on Android 10+ and FileProvider on Android 9 and below. Designed for Android 16 scoped storage compliance.
 
-still in development mode, try to handle downloading a pdf file from the we and saving to cordova.file.externalCacheDirectory
+**Platform:** Android only  
+**Minimum SDK:** Android 5.0 (API 21)  
+**npm:** https://www.npmjs.com/package/cordova-plugin-android-openfile
 
-trying to resolve the below.
+---
 
-//DOWNLOAD AND SAVE FILE ***********************************************************************
+## Installation
 
-function downloadAndSaveFile(dir, url, filename) {
-    // Use fetch to download the file
-    fetch(url)
-        .then(response => response.blob()) // Convert the response to a blob
-        .then(blob => {
-            // Resolve the local file system URL where to save the file
-            window.resolveLocalFileSystemURL(dir, function (dirEntry) {
-                // Get a file entry for the file in the specified directory
-                dirEntry.getFile(filename, { create: true, exclusive: false }, function (fileEntry) {
-                    // Create a FileWriter object for our FileEntry
-                    fileEntry.createWriter(function (fileWriter) {
-                        fileWriter.onwriteend = function () {
-                            console.log("Download successful, file written to: " + fileEntry.nativeURL);
-                        };
-                        fileWriter.onerror = function (e) {
-                            console.error("Write failed: " + e.toString());
-                        };
-                        // Write the content of the blob to the file
-                        fileWriter.write(blob);
-                    });
-                }, onError);
-            }, onError);
-        })
-        .catch(error => {
-            console.error("Download error: ", error);
-        })
-    function onError(error) {
-        console.error("Error: ", error);
+```bash
+cordova plugin add cordova-plugin-android-openfile
+```
+
+---
+
+## What it does
+
+Provides three methods on `cordova.plugins.openFile`:
+
+| Method | Description |
+|--------|-------------|
+| `openDownloadedFile(path, [options], success, error)` | Opens a file by its native path |
+| `openPdfUsingSAF(success, error)` | Opens the system file picker (SAF) for the user to select a PDF |
+| `requestPermissions(success, error)` | Requests storage permissions (Android 9 and below only) |
+
+### How files are opened
+
+| Android version | Mechanism |
+|----------------|-----------|
+| Android 10+ (API 29+) | File is temporarily copied to `Downloads/TechView/` via MediaStore. MediaStore URIs are accessible by any app — no URI grants required. The copy is deleted when the user returns to your app (configurable). |
+| Android 9 and below (API 28-) | File is served via FileProvider using a `content://` URI with explicit URI permission grants. |
+
+The file in `cordova.file.externalCacheDirectory` is always kept as the download cache — the MediaStore copy is only created at open time.
+
+---
+
+## Usage
+
+### Open a downloaded file
+
+The file must already exist on the device. Pass the native file path — no `file://` prefix.
+
+```javascript
+var filePath = cordova.file.externalCacheDirectory.replace('file://', '') + 'myfile.pdf';
+
+cordova.plugins.openFile.openDownloadedFile(
+    filePath,
+    function() {
+        console.log('File opened successfully.');
+    },
+    function(err) {
+        console.error('Error opening file:', err);
     }
-}
+);
+```
 
-downloadAndSaveFile(cordova.file.externalCacheDirectory, 'https://www.xxxx.xx/xxx.pdf', 'xxx.pdf');
+### Open with options
 
-//OPEN FILE ***********************************************************************
+An optional `options` object can be passed as the second argument.
 
-// this works, but get error: access denined
+```javascript
+cordova.plugins.openFile.openDownloadedFile(
+    filePath,
+    { cleanup: true },   // default — deletes the Downloads copy when user returns to app
+    function() { console.log('Opened.'); },
+    function(err) { console.error(err); }
+);
+```
 
-cordova.InAppBrowser.open('file:///storage/emulated/0/Android/data/xxxx/cache/xxx.pdf', '_blank', 'location=yes');
+```javascript
+cordova.plugins.openFile.openDownloadedFile(
+    filePath,
+    { cleanup: false },  // keep the file in Downloads/TechView permanently
+    function() { console.log('Opened.'); },
+    function(err) { console.error(err); }
+);
+```
 
-//OPEN SAF file ***********************************************************************
+#### Options
 
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `cleanup` | boolean | `true` | When `true`, the MediaStore copy in `Downloads/TechView/` is deleted when the user returns to the app. When `false`, the file remains in Downloads. Only applies to Android 10+. |
 
-// To open a PDF using SAF
-cordova.plugins.openPdf.openPdfUsingSAF(function() {
-    console.log("PDF opened successfully.");
-}, function(err) {
-    console.error("Error:", err);
-});
+### Open the SAF file picker (user selects a PDF)
 
+```javascript
+cordova.plugins.openFile.openPdfUsingSAF(
+    function() {
+        console.log('PDF opened successfully.');
+    },
+    function(err) {
+        console.error('Error:', err);
+    }
+);
+```
 
-// To open a specific downloaded file
-cordova.plugins.openPdf.openDownloadedFile(filePath, function() {
-    console.log("Downloaded file opened successfully.");
-}, function(err) {
-    console.error("Error:", err);
-});
+### Request storage permissions (Android 9 and below)
 
+Not required when using `externalCacheDirectory` on Android 10+.
 
+```javascript
+cordova.plugins.openFile.requestPermissions(
+    function() {
+        console.log('Permission granted.');
+    },
+    function(err) {
+        console.error('Permission denied:', err);
+    }
+);
+```
+
+---
+
+## Supported file types
+
+`openDownloadedFile` detects the MIME type from the file extension so Android presents only compatible apps in the chooser.
+
+| Extension | MIME type |
+|-----------|-----------|
+| `.pdf` | `application/pdf` |
+| `.doc` | `application/msword` |
+| `.docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `.xls` | `application/vnd.ms-excel` |
+| `.xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| `.jpg` / `.jpeg` | `image/jpeg` |
+| `.png` | `image/png` |
+| other | `*/*` |
+
+---
+
+## FileProvider paths (Android 9 and below)
+
+The plugin registers a `FileProvider` with authority `{applicationId}.provider`:
+
+```xml
+<external-path name="external_files" path="." />
+<external-cache-path name="external_cache_files" path="." />
+<files-path name="internal_files" path="." />
+<cache-path name="internal_cache" path="." />
+```
+
+Files must be within one of these paths for FileProvider to serve them.
+
+---
+
+## Android permission requirements
+
+| Android version | Permission needed |
+|----------------|------------------|
+| Android 10+ (API 29+) | None — MediaStore is used |
+| Android 9 and below (API 28-) | `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` if accessing shared storage |
+
+---
+
+## License
+
+ISC

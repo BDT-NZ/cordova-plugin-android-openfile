@@ -1,4 +1,4 @@
-<plugin id="cordova-plugin-android-openfile" version="1.0.6" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+<plugin id="cordova-plugin-android-openfile" version="1.0.33" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
 	<name>OpenFilePlugin</name>
 	<js-module name="openFile" src="www/openFile.js">
 		<clobbers target="cordova.plugins.openFile" />
@@ -7,9 +7,22 @@
 	<platform name="android">
 		<!-- FileProvider configuration -->
 		<config-file target="AndroidManifest.xml" parent="/manifest/application">
-			<provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.provider" android:exported="false" android:grantUriPermissions="true">
-				<meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/provider_paths" />
+			<provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="${applicationId}.provider"
+                android:exported="false"
+                android:grantUriPermissions="true">
+				<meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/provider_paths" />
 			</provider>
+		</config-file>
+
+		<!-- OpenFileActivity handles SAF picker results only — no intent filters so it
+		     does not appear in the system chooser when other apps open PDFs -->
+		<config-file target="AndroidManifest.xml" parent="/manifest/application">
+			<activity android:name="nz.bdt.androidopenfile.OpenFileActivity" android:exported="false">
+			</activity>
 		</config-file>
 
 		<!-- Include the provider paths XML file -->
@@ -24,4 +37,3 @@
 		<source-file src="src/android/OpenFile.java" target-dir="src/nz/bdt/androidopenfile" />
 	</platform>
 </plugin>
-
