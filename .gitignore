@@ -10,6 +10,7 @@ CLAUDE.md
 .idea/
 *.suo
 *.user
+*.code-workspace
 
 # OS files
 .DS_Store
